@@ -2,13 +2,28 @@ import os
 import spacy
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from sqlalchemy import func
 from datetime import datetime
 
+import logging
+ 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+ 
+logger = logging.getLogger(__name__)
+
 # --- App & Database Configuration ---
 app = Flask(__name__)
+CORS(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'shopping.db')
+logger.info("Masked text: %s", basedir)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/shopping.db'
+logger.info("Masked text: %s",app.config['SQLALCHEMY_DATABASE_URI'] )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -127,6 +142,7 @@ def process_command(text, lang='en'):
     for verb_list in keywords.values():
         for verb in verb_list:
             final_item = final_item.replace(verb, '')
+    # logger.info("Masked text: %s",action, final_item.strip(), quantity or '1', price_filter )
 
     return action, final_item.strip(), quantity or '1', price_filter
 
@@ -219,10 +235,16 @@ def handle_voice_command():
         return jsonify({'status': 'error', 'message': 'No text provided'}), 400
 
     action, item_name, quantity, _ = process_command(text, lang)
+    logger.info("Masked text: %s", action)
+    logger.info("Masked text: %s", item_name)
+    logger.info("Masked text: %s", quantity)
+
+
+
 
     if not action or not item_name:
         return jsonify({'status': 'error', 'message': 'Could not understand the command.'}), 400
-
+    
     if action == 'add':
         # NEW: Check for substitutes
         substitutes = SUBSTITUTE_MAP.get(item_name.lower(), [])
@@ -270,4 +292,4 @@ def delete_item(item_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host="0.0.0.0",port=7860)
